@@ -1,0 +1,6 @@
+streamlit==1.24.0
+hiplot==0.1.33
+pandas==2.1.4
+numpy==1.26.3
+scikit-learn==1.3.2
+pyarrow==14.0.1
