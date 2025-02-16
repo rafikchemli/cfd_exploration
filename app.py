@@ -118,15 +118,24 @@ def create_umap_visualization(X_scaled, labels, states, features, penetrating_pe
             help="Choose how to color the points"
         )
 
-    # Create UMAP embedding
+    # # Create UMAP embedding
+    # with st.spinner("Generating UMAP projection..."):
+    #     reducer = umap.UMAP(
+    #         n_neighbors=n_neighbors,
+    #         min_dist=min_dist,
+    #         random_state=42
+    #     )
+    #     embedding = reducer.fit_transform(X_scaled)
+    
     with st.spinner("Generating UMAP projection..."):
         reducer = umap.UMAP(
             n_neighbors=n_neighbors,
             min_dist=min_dist,
-            random_state=42
+            random_state=None,  # Remove random_state to allow parallelism
+            n_jobs=-1  # Use all available cores
         )
         embedding = reducer.fit_transform(X_scaled)
-    
+        
     # Create dataframe for plotting
     plot_data = pd.DataFrame({
         'UMAP1': embedding[:, 0],
