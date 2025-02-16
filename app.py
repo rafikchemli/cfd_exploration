@@ -13,7 +13,7 @@ import time
 import streamlit.components.v1 as components
 
 st.set_page_config(page_title="Clustering Analysis", layout="wide")
-st.title("Particle States Clustering Analysis")
+st.title("CFD Particle Analysis")
 
 # Utility functions
 @st.cache_data
@@ -57,13 +57,13 @@ def plot_cluster_state_proportions(df):
     
     fig.add_trace(go.Scatter(
         x=total_sizes.index,
-        y=cluster_state_props.sum(axis=1),  # This will place points at the top of each stack
-        text=[f'Total: {size}' for size in total_sizes],
+        y=cluster_state_props.sum(axis=1) + 5,  # Add 5% margin
+        text=[f'{size}' for size in total_sizes],
         mode='text',
         textposition='top center',
         showlegend=False
-    ))
-    
+        ))  
+        
     fig.update_layout(
         barmode='stack',
         title='Cluster Analysis: State Proportions and Counts',
@@ -232,6 +232,7 @@ def min_max_scale(df, features):
     return scaled_df
 
 # Main app
+# Main app
 try:
     df = load_data()
     df = df.rename(columns=rename_column)
@@ -241,7 +242,7 @@ try:
     st.sidebar.header("Parameters")
     clustering_algorithm = st.sidebar.selectbox(
         "Clustering Algorithm",
-        options=["KMeans", "Spectral", "BIRCH"],
+        options=["Spectral", "KMeans", "BIRCH"],
         help="Select the clustering algorithm to use"
     )
     
@@ -269,8 +270,6 @@ try:
         
         # Tab 1: Statistical Analysis
         with tab1:
-            st.header("Statistical Analysis")
-            
             with st.spinner("Analyzing data distributions and correlations..."):
                 # Create dummy variables for states
                 state_dummies = pd.get_dummies(df['state'], prefix='state')
@@ -279,15 +278,23 @@ try:
                 combined_data = pd.DataFrame(X_scaled, columns=features)
                 combined_data = pd.concat([combined_data, state_dummies], axis=1)
                 
-                # Calculate correlations
-                correlations = combined_data.corr()
+                # Calculate correlations between features and states only
+                feature_state_correlations = pd.DataFrame(
+                    np.zeros((len(features), len(state_dummies.columns))),
+                    index=features,
+                    columns=state_dummies.columns
+                )
+                
+                for feature in features:
+                    for state in state_dummies.columns:
+                        feature_state_correlations.loc[feature, state] = combined_data[feature].corr(combined_data[state])
                 
                 # Create correlation heatmap
                 fig_corr = go.Figure(data=go.Heatmap(
-                    z=correlations,
-                    x=correlations.columns,
-                    y=correlations.columns,
-                    text=np.round(correlations, 2),
+                    z=feature_state_correlations.values,
+                    x=feature_state_correlations.columns,
+                    y=feature_state_correlations.index,
+                    text=np.round(feature_state_correlations.values, 2),
                     texttemplate='%{text}',
                     textfont={"size": 10},
                     hoverongaps=False,
@@ -296,71 +303,26 @@ try:
                 ))
                 
                 fig_corr.update_layout(
-                    title='Feature-State Correlation Matrix',
+                    title='Feature-State Correlations',
                     height=800,
                     width=1000,
                     xaxis={'tickangle': 45}
                 )
                 
-                # Calculate feature-state associations
-                feature_state_corr = []
-                for feature in features:
-                    correlations_with_states = [
-                        abs(combined_data[feature].corr(combined_data[f'state_{state}']))
-                        for state in ['penetrating', 'oscillating', 'bouncing']
-                    ]
-                    feature_state_corr.append({
-                        'Feature': feature,
-                        'Association Strength': max(correlations_with_states)
-                    })
-                
-                # Create association strength plot
-                assoc_df = pd.DataFrame(feature_state_corr)
-                fig_assoc = go.Figure(data=[
-                    go.Bar(
-                        x=assoc_df['Feature'],
-                        y=assoc_df['Association Strength'],
-                        text=np.round(assoc_df['Association Strength'], 3),
-                        textposition='auto',
-                    )
-                ])
-                
-                fig_assoc.update_layout(
-                    title="Maximum Feature-State Association Strength",
-                    xaxis_title="Feature",
-                    yaxis_title="Association Strength",
-                    height=400
-                )
-                
                 # Display plots
                 col1, col2 = st.columns([2, 1])
-            
-                with col2:
-                    st.subheader("Feature-State Associations")
-                    st.plotly_chart(fig_assoc, use_container_width=True)
-                # Calculate statistics for numeric features
-                numeric_stats = pd.DataFrame({
-                    'Feature': features,
-                    'Mean': np.mean(X, axis=0),
-                    'Std': np.std(X, axis=0),
-                    'Min': np.min(X, axis=0),
-                    'Max': np.max(X, axis=0)
-                })
                 
                 # State distribution
                 state_dist = df['state'].value_counts().reset_index()
                 state_dist.columns = ['State', 'Count']
                 state_dist['Percentage'] = (state_dist['Count'] / len(df) * 100).round(2)
                 
-                # Display results
-                # col1, col2 = st.columns([2, 1])
-                
                 with col1:
-                    st.subheader("Feature Correlations")
+                    st.subheader("Correlations")
                     st.plotly_chart(fig_corr, use_container_width=True)
                 
                 with col2:
-                    st.subheader("State Distribution")
+                    st.subheader("Distribution")
                     fig_state = px.pie(
                         state_dist, 
                         values='Count', 
@@ -369,15 +331,8 @@ try:
                     )
                     st.plotly_chart(fig_state, use_container_width=True)
                 
-                # st.subheader("Feature Statistics")
-                # st.dataframe(
-                #     numeric_stats.round(2).set_index('Feature'),
-                #     use_container_width=True
-                # )
-                
                 # Average feature values by state
                 st.subheader("Average Feature Values by State (Standardized 0-1)")
-                # Scale the features
                 scaled_features = min_max_scale(df, features)
                 avg_by_state = scaled_features.groupby('state')[features].mean()
                 std_by_state = scaled_features.groupby('state')[features].std()
@@ -402,7 +357,7 @@ try:
                     xaxis_title='State',
                     yaxis_title='Standardized Value (0-1)',
                     height=500,
-                    yaxis_range=[0, 1]  # Set y-axis range from 0 to 1
+                    yaxis_range=[0, 1]
                 )
 
                 st.plotly_chart(fig_avg, use_container_width=True)
@@ -410,7 +365,6 @@ try:
         # Tab 2: Clustering Results
         with tab2:
             with st.spinner("Performing clustering..."):
-                # Perform clustering
                 df["cluster"] = perform_clustering(X_scaled, clustering_algorithm, n_clusters)
                 
                 # Calculate penetrating proportions
@@ -430,31 +384,66 @@ try:
                 # Display cluster proportions
                 st.header("Cluster State Proportions")
                 fig = plot_cluster_state_proportions(df)
+                fig.update_layout(
+                    barmode='stack',
+                    title='Cluster Analysis: State Proportions and Counts',
+                    xaxis_title='Cluster',
+                    yaxis_title='Proportion (%)',
+                    height=600,
+                    showlegend=True,
+                    legend_title='State',
+                    xaxis=dict(dtick=1)
+                )
+
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # Cluster statistics
-                st.header("Cluster Statistics")
-                cols = st.columns(2)
-                with cols[0]:
-                    st.subheader("Overall Statistics")
-                    total_penetrating = (df["state"] == "penetrating").mean() * 100
-                    st.write(f"Total penetrating %: {total_penetrating:.1f}%")
-                    st.write(f"Number of source files: {df['source_file'].nunique()}")
-                    st.write(f"Total number of particles: {len(df)}")
+                # Create correlation heatmap between features and clusters
+                cluster_dummies = pd.get_dummies(df['cluster'], prefix='cluster')
+                feature_cluster_correlations = pd.DataFrame(
+                    np.zeros((len(features), len(cluster_dummies.columns))),
+                    index=features,
+                    columns=cluster_dummies.columns
+                )
                 
-                with cols[1]:
-                    st.subheader("Feature Importance")
-                    if clustering_algorithm == "KMeans":
-                        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init="auto")
-                        kmeans.fit(X_scaled)
-                        feature_importance = pd.DataFrame({
-                            "Feature": features,
-                            "Cluster Center Range": [np.ptp(kmeans.cluster_centers_[:, i]) for i in range(len(features))]
-                        })
-                        st.dataframe(feature_importance.sort_values("Cluster Center Range", ascending=False))
-                    else:
-                        st.write("Feature importance only available for KMeans clustering")
-        
+                # Calculate correlations between features and clusters
+                for feature in features:
+                    for cluster in cluster_dummies.columns:
+                        feature_cluster_correlations.loc[feature, cluster] = pd.Series(X_scaled[:, features.index(feature)]).corr(cluster_dummies[cluster])
+                
+                # Create cluster correlation heatmap
+                fig_cluster_corr = go.Figure(data=go.Heatmap(
+                    z=feature_cluster_correlations.values,
+                    x=feature_cluster_correlations.columns,
+                    y=feature_cluster_correlations.index,
+                    text=np.round(feature_cluster_correlations.values, 2),
+                    texttemplate='%{text}',
+                    textfont={"size": 10},
+                    hoverongaps=False,
+                    colorscale='RdBu',
+                    zmid=0
+                ))
+                
+                fig_cluster_corr.update_layout(
+                    title='Feature-Cluster Correlations',
+                    height=800,
+                    width=1000,
+                    xaxis={'tickangle': 45}
+                )
+                
+                st.subheader("Feature-Cluster Correlations")
+                st.plotly_chart(fig_cluster_corr, use_container_width=True)
+                
+                st.subheader("Feature Importance")
+                if clustering_algorithm == "KMeans":
+                    kmeans = KMeans(n_clusters=n_clusters, n_init="auto")
+                    kmeans.fit(X_scaled)
+                    feature_importance = pd.DataFrame({
+                        "Feature": features,
+                        "Cluster Center Range": [np.ptp(kmeans.cluster_centers_[:, i]) for i in range(len(features))]
+                    })
+                    st.dataframe(feature_importance.sort_values("Cluster Center Range", ascending=False))
+                else:
+                    st.write("Feature importance only available for KMeans clustering")
         # Tab 3: Parallel Plot
         with tab3:
             with st.spinner("Generating parallel plot..."):
@@ -483,8 +472,6 @@ try:
             
             st.plotly_chart(fig, use_container_width=True)
             
-            
-            # Add interpretation guidelines
             with st.expander("How to Interpret UMAP Visualization"):
                 st.write("""
                 ### UMAP Visualization Guide
