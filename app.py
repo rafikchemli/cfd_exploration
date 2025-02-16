@@ -131,7 +131,7 @@ def create_umap_visualization(X_scaled, labels, states, features, penetrating_pe
         reducer = umap.UMAP(
             n_neighbors=n_neighbors,
             min_dist=min_dist,
-            random_state=None,  # Remove random_state to allow parallelism
+            random_state=42,  # Remove random_state to allow parallelism
             n_jobs=-1  # Use all available cores
         )
         embedding = reducer.fit_transform(X_scaled)
