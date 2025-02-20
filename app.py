@@ -408,7 +408,8 @@ try:
                 # Calculate correlations between features and clusters
                 for feature in features:
                     for cluster in cluster_dummies.columns:
-                        feature_cluster_correlations.loc[feature, cluster] = pd.Series(X_scaled[:, features.index(feature)]).corr(cluster_dummies[cluster])
+                        feature_cluster_correlations.loc[feature, cluster] = pd.Series(X_scaled[:, features.index(feature)], index=df.index).corr(cluster_dummies[cluster])
+
                 
                 # Create cluster correlation heatmap
                 fig_cluster_corr = go.Figure(data=go.Heatmap(
@@ -425,25 +426,96 @@ try:
                 
                 fig_cluster_corr.update_layout(
                     title='Feature-Cluster Correlations',
-                    height=800,
+                    height=600,
                     width=1000,
                     xaxis={'tickangle': 45}
                 )
                 
+                
+                
+                # st.subheader("Feature Importance")
+                # if clustering_algorithm == "KMeans":
+                #     kmeans = KMeans(n_clusters=n_clusters, n_init="auto")
+                #     kmeans.fit(X_scaled)
+                #     feature_importance = pd.DataFrame({
+                #         "Feature": features,
+                #         "Cluster Center Range": [np.ptp(kmeans.cluster_centers_[:, i]) for i in range(len(features))]
+                #     })
+                #     st.dataframe(feature_importance.sort_values("Cluster Center Range", ascending=False))
+                # else:
+                #     st.write("Feature importance only available for KMeans clustering")
+                
+            
+
+                st.subheader("Feature Patterns Across Clusters")
+                col1, col2 = st.columns([2, 1])
+
+                with col1:
+                    metric = st.selectbox(
+                        "Select statistic",
+                        options=["Mean", "Median"],
+                        help="Choose which central tendency measure to display"
+                    )
+
+                with col2:
+                    scaling = st.selectbox(
+                        "Select scaling",
+                        options=["None", "Standard (0-1)"],
+                        help="Choose how to scale the feature values"
+                    )
+
+                # Prepare the data
+                analysis_df = df[features + ['cluster']].copy()
+
+                if scaling == "Standard (0-1)":
+                    # Scale features to 0-1 range
+                    for feature in features:
+                        min_val = analysis_df[feature].min()
+                        max_val = analysis_df[feature].max()
+                        analysis_df[feature] = (analysis_df[feature] - min_val) / (max_val - min_val)
+
+                # Calculate statistics
+                if metric == "Mean":
+                    cluster_stats = analysis_df.groupby('cluster')[features].mean()
+                    cluster_ranges = analysis_df.groupby('cluster')[features].agg(lambda x: x.max() - x.min())
+                else:  # Median
+                    cluster_stats = analysis_df.groupby('cluster')[features].median()
+                    cluster_ranges = analysis_df.groupby('cluster')[features].agg(lambda x: x.max() - x.min())
+
+                # Transpose the dataframes
+                cluster_stats = cluster_stats.T
+                cluster_ranges = cluster_ranges.T
+
+                # Create central tendency heatmap
+                fig_stats = go.Figure(data=go.Heatmap(
+                    z=cluster_stats.values,
+                    x=cluster_stats.columns,  # These are now the clusters
+                    y=cluster_stats.index,    # These are now the features
+                    text=np.round(cluster_stats.values, 2),
+                    texttemplate='%{text}',
+                    textfont={"size": 10},
+                    hoverongaps=False,
+                    colorscale='RdBu',
+                    zmid=cluster_stats.values.mean()
+                ))
+
+                fig_stats.update_layout(
+                    title=f'Feature {metric} Values by Cluster{" (Standardized)" if scaling == "Standard (0-1)" else ""}',
+                    xaxis_title='Cluster',
+                    yaxis_title='Feature',
+                    height=600,
+                    xaxis=dict(
+                        tickmode='linear',  # Show all cluster numbers
+                        dtick=1            # Space between ticks
+                    )
+                )
+
+                # Display plots
+                st.plotly_chart(fig_stats, use_container_width=True)
+
                 st.subheader("Feature-Cluster Correlations")
                 st.plotly_chart(fig_cluster_corr, use_container_width=True)
-                
-                st.subheader("Feature Importance")
-                if clustering_algorithm == "KMeans":
-                    kmeans = KMeans(n_clusters=n_clusters, n_init="auto")
-                    kmeans.fit(X_scaled)
-                    feature_importance = pd.DataFrame({
-                        "Feature": features,
-                        "Cluster Center Range": [np.ptp(kmeans.cluster_centers_[:, i]) for i in range(len(features))]
-                    })
-                    st.dataframe(feature_importance.sort_values("Cluster Center Range", ascending=False))
-                else:
-                    st.write("Feature importance only available for KMeans clustering")
+                    
         # Tab 3: Parallel Plot
         with tab3:
             with st.spinner("Generating parallel plot..."):
