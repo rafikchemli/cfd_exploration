@@ -1,0 +1,17 @@
+Figure Captions
+==============
+
+Figure 1: Distribution of particle states in the CFD simulation. The dataset contains 11000 particles distributed across 3 states (penetrating, bouncing, oscillating).
+
+Figure 2: Correlation heatmap between particle features and states. Positive values (red) indicate positive correlation, while negative values (blue) indicate inverse correlation. The analysis reveals which features are most predictive of specific particle states.
+
+Figure 3: Proportion of particle states within each cluster. The stacked bar chart shows how particles with different states (bouncing, oscillating, penetrating) are distributed across the 8 identified clusters. Numbers at the top indicate the total count of particles in each cluster.
+
+Figure 4: UMAP dimensionality reduction visualization of the particle feature space. Points are colored by particle state. The proximity of points in the projection indicates similarity in the multi-dimensional feature space, revealing natural clustering patterns in the data. This visualization uses a 15-nearest neighbor approach with a minimum distance of 0.1.
+
+Figure 5: Standardized feature values by particle state. Bars show the mean value for each feature (scaled to 0-1 range) across the different particle states, with error bars representing one standard deviation. This visualization highlights which features are most distinctly associated with each state.
+
+Figure 6: Feature patterns across clusters. The heatmap shows the standardized mean values for each feature across different clusters. This visualization highlights which features characterize each cluster and reveals potential patterns in the multi-dimensional feature space.
+
+Figure 7: Parallel coordinates plot of standardized feature values by state. Each line represents a particle, colored by its state, with the bold lines showing the mean values for each state. This visualization allows for the comparison of multi-dimensional feature distributions across different particle states.
+
