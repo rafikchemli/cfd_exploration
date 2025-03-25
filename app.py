@@ -11,6 +11,10 @@ from sklearn.neighbors import NearestNeighbors
 import umap
 import time
 import streamlit.components.v1 as components
+import random
+
+random.seed(42)
+np.random.seed(42)
 
 st.set_page_config(page_title="Clustering Analysis", layout="wide")
 st.title("CFD Particle Analysis")
@@ -81,7 +85,7 @@ def perform_clustering(X_scaled, algorithm, n_clusters):
     if algorithm == "KMeans":
         clusterer = KMeans(n_clusters=n_clusters, random_state=42, n_init="auto")
     elif algorithm == "Spectral":
-        clusterer = SpectralClustering(n_clusters=n_clusters, random_state=42, affinity='nearest_neighbors')
+        clusterer = SpectralClustering(n_clusters=n_clusters, random_state=42, affinity='nearest_neighbors', n_neighbors=100)
     elif algorithm == "BIRCH":
         clusterer = Birch(n_clusters=n_clusters)
     
