@@ -4,9 +4,9 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.cluster import KMeans, SpectralClustering, Birch, DBSCAN
-from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score 
 from sklearn.neighbors import NearestNeighbors
 import umap
 import time
@@ -235,7 +235,18 @@ def min_max_scale(df, features):
         scaled_df[feature] = (df[feature] - min_val) / (max_val - min_val)
     return scaled_df
 
-# Main app
+
+@st.cache_data
+def load_and_prepare_data_filtering(features):
+    df = pd.read_csv('final_states_with_clusters.csv')
+    scaler = MinMaxScaler()
+    scaled_features = scaler.fit_transform(df[features])
+    for i, feature in enumerate(features):
+        df[f'scaled_{feature}'] = scaled_features[:, i]
+    cluster_state_proportions = df.groupby('cluster')['state'].value_counts(normalize=True).unstack(fill_value=0) * 100
+    return df, cluster_state_proportions
+
+
 # Main app
 try:
     df = load_data()
@@ -259,11 +270,12 @@ try:
     
     if len(features) > 0:
         # Create tabs
-        tab1, tab2, tab3, tab4 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "Statistical Analysis",
             "Clustering Results",
             "Parallel Plot",
-            "UMAP Visualization"
+            "UMAP Visualization",
+            "Filtering"
         ])
         
         # Prepare data
@@ -271,7 +283,16 @@ try:
         X = df[features].copy()
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
-        
+        # Load your data
+        df_cluster_analysis, cluster_state_proportions = load_and_prepare_data_filtering(features)
+
+        # Scale features with MinMaxScaler (0 to 1)
+        feature_scaler_cluster_analysis = MinMaxScaler()
+        scaled_features_cluster_analysis = feature_scaler_cluster_analysis.fit_transform(df_cluster_analysis[features])
+        for i, feature in enumerate(features):
+            df_cluster_analysis[f'scaled_{feature}'] = scaled_features_cluster_analysis[:, i]
+
+
         # Tab 1: Statistical Analysis
         with tab1:
             with st.spinner("Analyzing data distributions and correlations..."):
@@ -569,6 +590,80 @@ try:
                 - Overlapping clusters might indicate similar behaviors
                 - Gradients in penetrating % can show transition zones
                 """)
+
+        with tab5:
+            # with st.spinner("Analyzing clusters..."):  # Updated spinner text for clarity
+                # Streamlit app
+                st.title("Cluster Feature Analysis")
+
+                # Create two columns for Cluster Selection and Sort Clusters
+                col1, col2 = st.columns(2)
+
+                # Cluster Selection in the first column
+                with col1:
+                    st.header("Cluster Selection")
+                    selected_state = st.selectbox("Select state", options=['penetrating', 'oscillating', 'bouncing'])
+
+                # Sort Clusters in the second column
+                with col2:
+                    st.header("Sort Clusters")
+                    sort_options = ["State Proportion"] + features
+                    sort_by = st.selectbox("Sort clusters by", options=sort_options, index=0)  # Default to "State Proportion"
+
+                num_clusters = st.slider("Number of top clusters", 1, len(df_cluster_analysis['cluster'].unique()), 3)
+
+                # Use precomputed cluster_state_proportions (no recomputation here)
+                top_clusters = cluster_state_proportions.sort_values(selected_state, ascending=False).head(num_clusters).index.tolist()
+                st.write(f"Top clusters for {selected_state}: {', '.join(map(str, top_clusters))}")
+
+                # Filter data for top clusters
+                top_clusters_df = df_cluster_analysis[df_cluster_analysis['cluster'].isin(top_clusters)]
+
+                # Calculate mean scaled features (features as rows, clusters as columns)
+                mean_scaled_features = top_clusters_df.groupby('cluster')[[f'scaled_{feature}' for feature in features]].mean()
+                mean_scaled_features = mean_scaled_features.reindex(top_clusters).T  # Transpose: features on y-axis
+                mean_scaled_features.index = features  # Set index to original feature names
+
+                # Calculate state proportions
+                state_proportions_per_cluster = top_clusters_df.groupby('cluster')['state'].value_counts(normalize=True).unstack(fill_value=0) * 100
+
+                # Sort the clusters based on the selected option
+                if sort_by == "State Proportion":
+                    sorted_clusters = state_proportions_per_cluster.sort_values(selected_state, ascending=False).index
+                else:
+                    feature_values_for_sorting = mean_scaled_features.loc[sort_by]
+                    sorted_clusters = feature_values_for_sorting.sort_values(ascending=False).index
+
+                # Reorder mean_scaled_features and state_proportions_per_cluster based on sorted clusters
+                mean_scaled_features_sorted = mean_scaled_features[sorted_clusters]
+                state_proportions_sorted = state_proportions_per_cluster.loc[sorted_clusters]
+
+                # Create cluster labels for display
+                cluster_labels = [f"Cluster {c}" for c in sorted_clusters]
+
+                # Display heatmap
+                st.subheader(f"Mean Scaled Features Sorted by {sort_by}")
+                fig = go.Figure(data=go.Heatmap(
+                    z=mean_scaled_features_sorted.values,
+                    x=cluster_labels,
+                    y=mean_scaled_features_sorted.index,
+                    text=np.round(mean_scaled_features_sorted.values, 2),
+                    texttemplate='%{text}',
+                    colorscale='Viridis',
+                    zmin=0, zmax=1  # Matches MinMaxScaler range
+                ))
+                fig.update_layout(
+                    title=f'Top {num_clusters} {selected_state} Clusters Sorted by {sort_by}',
+                    xaxis_title='Cluster',
+                    yaxis_title='Scaled Feature',
+                    height=500,
+                    width=800
+                )
+                st.plotly_chart(fig)
+
+                # Display state proportions
+                st.subheader(f"State Proportions (%) Sorted by {sort_by}")
+                st.dataframe(state_proportions_sorted.style.format("{:.2f}"))
 
     else:
         st.warning("Please select at least one feature for clustering.")
