@@ -12,5 +12,4 @@ dbscan.py
 figure_export.py
 patterns.py
 silhouette.py
-silhouette_explo.py
 elbow_silhouette
