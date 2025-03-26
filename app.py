@@ -250,11 +250,11 @@ try:
         help="Select the clustering algorithm to use"
     )
     
-    n_clusters = st.sidebar.slider("Number of clusters", min_value=2, max_value=20, value=10)
+    n_clusters = st.sidebar.slider("Number of clusters", min_value=2, max_value=100, value=10)
     features = st.sidebar.multiselect(
         "Select features for clustering",
         options=['diameter', 'density', 'mass', 'vm', 'pressure', 'primary_flow', 'particle_feed'],
-        default=['diameter', 'density', 'mass', 'vm', 'pressure', 'primary_flow', 'particle_feed']
+        default=['diameter', 'density', 'pressure', 'primary_flow', 'particle_feed']
     )
     
     if len(features) > 0:
