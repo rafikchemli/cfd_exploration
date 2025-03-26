@@ -9,25 +9,27 @@ all: figures
 OUTPUT_DIR = figures
 DATA_FILE = final_states_clean.parquet
 ALGORITHM = Spectral
-CLUSTERS = 8
-FEATURES = primary_flow pressure density particle_feed diameter mass
-LABELS = "Primary gas flow (kg/s)" "Pressure (bar)" "Particle density (kg/m3)" "Particle feed rate (kg/s)" "diameter" "mass"
+CLUSTERS = 6 8 10
+FEATURES = primary_flow pressure density particle_feed diameter
+LABELS = "Primary gas flow (kg/s)" "Pressure (bar)" "Particle density (kg/m3)" "Particle feed rate (kg/s)" "Particle diameter (m)"
 
 # Create figures
 figures:
 	@echo "Generating publication-quality figures for CFD analysis..."
-	@mkdir -p $(OUTPUT_DIR)
-	@python3 figure_export.py \
+	@python3 Clustering_figures.py \
 		--data $(DATA_FILE) \
 		--output $(OUTPUT_DIR) \
 		--n_clusters $(CLUSTERS) \
 		--clustering $(ALGORITHM) \
 		--features $(FEATURES) \
 		--labels $(LABELS)
-	@echo "Figure generation complete. Figures saved to $(OUTPUT_DIR)/"
+	@echo "Figure generation complete."
+	@echo "Figures saved to:"
+	@for n in $(CLUSTERS); do echo "  - $(OUTPUT_DIR)/$${n}_clusters/"; done
 	@echo "Available figures:"
-	@ls -la $(OUTPUT_DIR)/*.png
-	@echo "Caption file: $(OUTPUT_DIR)/figure_captions.txt"
+	@ls -la $(OUTPUT_DIR)/*_clusters/*.png
+	@echo "Caption files:"
+	@ls -la $(OUTPUT_DIR)/*_clusters/figure_captions.txt
 
 # Clean generated files
 clean:

@@ -5,7 +5,7 @@ Figure 1: Distribution of particle states in the CFD simulation. The dataset con
 
 Figure 2: Correlation heatmap between particle features and states. Positive values (red) indicate positive correlation, while negative values (blue) indicate inverse correlation. The analysis reveals which features are most predictive of specific particle states.
 
-Figure 3: Proportion of particle states within each cluster. The stacked bar chart shows how particles with different states (bouncing, oscillating, penetrating) are distributed across the 8 identified clusters. Numbers at the top indicate the total count of particles in each cluster.
+Figure 3: Proportion of particle states within each cluster. The stacked bar chart shows how particles with different states (bouncing, oscillating, penetrating) are distributed across the 12 identified clusters. Numbers at the top indicate the total count of particles in each cluster.
 
 Figure 4: UMAP dimensionality reduction visualization of the particle feature space. Points are colored by particle state. The proximity of points in the projection indicates similarity in the multi-dimensional feature space, revealing natural clustering patterns in the data. This visualization uses a 15-nearest neighbor approach with a minimum distance of 0.1.
 
