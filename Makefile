@@ -9,7 +9,7 @@ all: figures
 OUTPUT_DIR = figures
 DATA_FILE = final_states_clean.parquet
 ALGORITHM = Spectral
-CLUSTERS = 6 8 10
+CLUSTERS = 100
 FEATURES = primary_flow pressure density particle_feed diameter
 LABELS = "Primary gas flow (kg/s)" "Pressure (bar)" "Particle density (kg/m3)" "Particle feed rate (kg/s)" "Particle diameter (m)"
 
