@@ -14,3 +14,7 @@ patterns.py
 silhouette.py
 elbow_silhouette
 CLAUDE.md
+final_states_clean_ex.parquet
+final_states_clean_no_tracker.parquet
+
+

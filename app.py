@@ -264,7 +264,7 @@ try:
     n_clusters = st.sidebar.slider("Number of clusters", min_value=2, max_value=100, value=10)
     features = st.sidebar.multiselect(
         "Select features for clustering",
-        options=['diameter', 'density', 'mass', 'vm', 'pressure', 'primary_flow', 'particle_feed'],
+        options=['diameter', 'density', 'pressure', 'primary_flow', 'particle_feed'],
         default=['diameter', 'density', 'pressure', 'primary_flow', 'particle_feed']
     )
     
@@ -545,11 +545,32 @@ try:
         with tab3:
             with st.spinner("Generating parallel plot..."):
                 st.header("Interactive Parallel Plot")
-                exp = hip.Experiment.from_dataframe(df)
+                
+                # Define the mapping for column renaming
+                FEATURES = ['primary_flow', 'pressure', 'density', 'particle_feed', 'diameter']
+                LABELS = ["Primary gas flow (kg/s)", "Pressure (bar)", "Particle density (kg/m3)", 
+                         "Particle feed rate (kg/s)", "Particle diameter (m)"]
+                
+                # Create a dictionary for the mapping
+                features_mapping = dict(zip(FEATURES, LABELS))
+                
+                # Create a temporary dataframe with renamed columns for the parallel plot
+                df_plot = df.copy()
+                df_plot = df_plot.rename(columns=features_mapping)
+                
+                # Get the renamed features for the order parameter
+                renamed_features = []
+                for feature in features:
+                    if feature in features_mapping:
+                        renamed_features.append(features_mapping[feature])
+                    else:
+                        renamed_features.append(feature)
+                
+                exp = hip.Experiment.from_dataframe(df_plot)
                 exp.display_data(hip.Displays.PARALLEL_PLOT).update({
                     "colorby": "state",
                     "height": "800px",
-                    "order": ["source_file", "source_penetrating_%", "cluster", "cluster_penetrating_%", "state"] + features,
+                    "order": ["source_file", "source_penetrating_%", "cluster", "cluster_penetrating_%", "state"] + renamed_features,
                     "hide": []
                 })
                 hip_html = exp.to_html()
